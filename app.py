@@ -329,7 +329,7 @@ def yt_api():
     
     if stream:
         video_data["direct_stream"] = {
-            "url": stream.get("url"),
+            "url": stream.get("long_url"),
             "quality": stream.get("quality"),
             "height": stream.get("height"),
             "ext": stream.get("ext"),
