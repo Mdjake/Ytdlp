@@ -17,28 +17,30 @@ app = Flask(__name__)
 # =========================================================
 SHORT_DB = {}
 SHORT_TTL = 60 * 60 * 6  # 6 hours
-PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+
 
 def _cleanup():
     now = time.time()
     for c in [k for k, v in SHORT_DB.items() if v["expires"] < now]:
         SHORT_DB.pop(c, None)
 
+
+def _get_base():
+    """Auto-derive public base URL from the current request."""
+    return request.host_url.rstrip("/")
+
 def _shorten(long_url):
-    """Return short URL or original if too short / empty."""
     if not long_url or not isinstance(long_url, str) or len(long_url) < 80:
         return long_url
     _cleanup()
-    # reuse existing
     for c, v in SHORT_DB.items():
         if v["url"] == long_url and v["expires"] > time.time():
-            return f"{PUBLIC_BASE_URL}/s/{c}" if PUBLIC_BASE_URL else f"/s/{c}"
+            return f"{_get_base()}/s/{c}"
     code = secrets.token_urlsafe(6)[:6].replace("-", "a").replace("_", "b")
     while code in SHORT_DB:
         code = secrets.token_urlsafe(6)[:6].replace("-", "a").replace("_", "b")
     SHORT_DB[code] = {"url": long_url, "expires": time.time() + SHORT_TTL}
-    return f"{PUBLIC_BASE_URL}/s/{code}" if PUBLIC_BASE_URL else f"/s/{code}"
-
+    return f"{_get_base()}/s/{code}"
 @app.route("/s/<code>", methods=["GET"])
 def _short_redirect(code):
     _cleanup()
